@@ -34,8 +34,8 @@ jobs:
           if [ -f source-snapshot.tar.gz ]; then
             tar -xzf source-snapshot.tar.gz
           fi
-          # 补丁文件在快照之后应用，保证修复一定生效
-          ls src/audioNative/qq.ts
+          # 快照里是完整的构建所需文件（含 vite.android.config.ts 与 iOS 侧资源）
+          ls index.html src/audioNative/qq.ts vite.android.config.ts
 
       - name: Install dependencies
         run: |
@@ -47,7 +47,9 @@ jobs:
       - name: Build web assets
         env:
           FOLIA_DISABLE_PWA: '1'
-        run: ./node_modules/.bin/vite build -c vite.android.config.ts
+        run: |
+          ls -la index.html
+          ./node_modules/.bin/vite build -c vite.android.config.ts
 
       - name: Sync Capacitor
         run: npx cap copy android
