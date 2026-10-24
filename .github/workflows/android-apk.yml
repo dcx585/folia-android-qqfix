@@ -32,7 +32,7 @@ jobs:
       - name: Restore source snapshot
         run: |
           if [ -f source-snapshot.tar.gz ]; then
-            tar -xzf source-snapshot.tar.gz
+            tar -xzf source-snapshot.tar.gz --strip-components=1
           fi
           # 快照里是完整的构建所需文件（含 vite.android.config.ts 与 iOS 侧资源）
           ls index.html src/audioNative/qq.ts vite.android.config.ts
