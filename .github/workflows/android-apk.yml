@@ -38,12 +38,15 @@ jobs:
           ls src/audioNative/qq.ts
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund --ignore-scripts --legacy-peer-deps
+        run: |
+          npm install --no-audit --no-fund --ignore-scripts --legacy-peer-deps
+          npm ls vite @vitejs/plugin-react --depth=0
+          ls node_modules/vite/package.json node_modules/@vitejs/plugin-react/package.json
 
       - name: Build web assets
         env:
           FOLIA_DISABLE_PWA: '1'
-        run: npx vite build -c vite.android.config.ts
+        run: ./node_modules/.bin/vite build -c vite.android.config.ts
 
       - name: Sync Capacitor
         run: npx cap copy android
