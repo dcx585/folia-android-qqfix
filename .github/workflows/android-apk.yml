@@ -52,7 +52,7 @@ jobs:
           ./node_modules/.bin/vite build -c vite.android.config.ts
 
       - name: Sync Capacitor
-        run: npx cap copy android
+        run: npx cap sync android
 
       - name: Restore signing keystore
         env:
