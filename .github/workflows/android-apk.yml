@@ -40,7 +40,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm install --no-audit --no-fund --ignore-scripts --legacy-peer-deps --include=dev >/dev/null 2>&1 || true
-          npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts --legacy-peer-deps vite@8 @vitejs/plugin-react react react-dom
+          npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts --legacy-peer-deps vite@8 @vitejs/plugin-react react react-dom @acemir/cssom@0.9.31 linkedom@0.18.13
           npm ls vite @vitejs/plugin-react --depth=0
           ls node_modules/vite/package.json node_modules/@vitejs/plugin-react/package.json
 
