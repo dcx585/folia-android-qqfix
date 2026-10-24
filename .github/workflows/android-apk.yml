@@ -39,7 +39,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install --no-audit --no-fund --ignore-scripts --legacy-peer-deps
+          npm ci --no-audit --no-fund --ignore-scripts --include=dev || npm install --no-audit --no-fund --ignore-scripts --legacy-peer-deps --include=dev
           npm ls vite @vitejs/plugin-react --depth=0
           ls node_modules/vite/package.json node_modules/@vitejs/plugin-react/package.json
 
