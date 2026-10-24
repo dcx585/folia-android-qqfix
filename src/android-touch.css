@@ -1,0 +1,54 @@
+/* ── 触屏基础适配 ──────────────────────────────────────────────
+   上游是按桌面（鼠标 + 精确指针）设计的：大量按钮是 h-8（32px）、
+   交互依赖 hover、滚动条样式按桌面写。安卓 WebView 是粗指针，
+   这里用 @media (pointer: coarse) 统一兜底，不改任何组件结构。
+
+   原则：只放大可点区域和补触屏反馈，不动布局与配色。
+   ─────────────────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+    /* 1. 可点元素的最小触控高度：Android Material 建议 48dp，
+          这里退到 44px（iOS HIG 的下限），避免把界面撑得过松。 */
+    button,
+    [role='button'],
+    [role='option'],
+    [role='tab'],
+    a[href],
+    label:has(> input) {
+        min-height: 44px;
+    }
+
+    /* 2. 小程序式的 h-8 / h-9 工具条按钮单独抬一点，但不影响图标方钮 */
+    .login-toolbar button,
+    .login-toolbar [role='button'] {
+        min-height: 44px;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    /* 3. 触屏没有 hover，按下要有反馈；同时禁止长按选中文字造成的误拖拽 */
+    button,
+    [role='button'],
+    [role='option'],
+    [role='tab'] {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        user-select: none;
+    }
+
+    button:active,
+    [role='button']:active,
+    [role='option']:active {
+        filter: brightness(1.12);
+    }
+
+    /* 4. 桌面滚动条在触屏上没有意义，统一隐藏（内容仍可滚动） */
+    * {
+        scrollbar-width: none;
+    }
+
+    *::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+    }
+}
