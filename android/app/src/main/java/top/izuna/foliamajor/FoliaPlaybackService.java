@@ -4,8 +4,6 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.media.AudioFocusRequest;
-import android.media.AudioManager;
 import android.app.Service;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -60,18 +58,6 @@ public class FoliaPlaybackService extends Service {
     private volatile long cachedDurationMs = 0L;
     private volatile long cachedPositionMs = 0L;
     private volatile boolean cachedPlaying = false;
-    /** 焦点请求对象留着复用：被抢走后要能立刻再要回来，重建一次请求太慢。 */
-    private AudioManager audioManager;
-    private Object audioFocusRequest;
-    private final android.os.Handler focusHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-    /** 被系统/别的 App 抢走焦点后，稍等再抢回来并让网页立刻续播（不等那 1 秒护栏）。 */
-    private final Runnable reacquireFocus = () -> {
-        requestFocusInternal();
-        if (cachedPlaying) {
-            // play 是幂等的：已经在放就什么都不做。这里只是把「续播」从最慢 1 秒压到 ~150ms。
-            emit("play");
-        }
-    };
     private static volatile boolean running = false;
     private PowerManager.WakeLock wakeLock;
     private WifiManager.WifiLock wifiLock;
@@ -100,13 +86,13 @@ public class FoliaPlaybackService extends Service {
         running = true;
         createNotificationChannel();
         mediaSession = new MediaSession(this, "FoliaPlayback");
-            // 「歌曲永不让位」策略：本服务主动持有音频焦点（AUDIOFOCUS_GAIN），
-    // 且焦点变化监听器是 no-op —— 游戏/其他 App 抢焦点时本 App 绝不自动暂停。
-    // 前端另有每秒自动续播护栏兜底（svc/nativePlaybackBridge.ts）。
-    audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-    requestFocusInternal();
+        // 刻意不向系统请求音频焦点（与上游 1.7.0 一致）。
+        // 真正发声的是 WebView 里的 <audio>，焦点必须由 Chromium 持有；本服务再申请
+        // AUDIOFOCUS_GAIN 会把焦点从 Chromium 手里抢走，Chromium 随即 pause 媒体元素，
+        // 用户看到的就是「点了播放，响一下自己暂停」。
+        // 防打断交给网页侧的 nudgeMainAudio 巡检（src/svc/nativePlaybackBridge.ts）。
 
-mediaSession.setCallback(new MediaSession.Callback() {
+        mediaSession.setCallback(new MediaSession.Callback() {
             @Override public void onPlay() { emit("play"); }
             @Override public void onPause() { emit("pause"); }
             @Override public void onSkipToNext() { emit("next"); }
@@ -135,48 +121,6 @@ mediaSession.setCallback(new MediaSession.Callback() {
     /** ColorOS lyric bridge uses this to decide whether a metadata refresh intent is worth sending. */
     public static boolean isRunning() {
         return running;
-    }
-
-    /**
-     * 请求音频焦点，并把监听器接上。
-     *
-     * 策略仍是「歌曲永不让位」：不会因为别的 App 出声就自己暂停。区别在于被抢走之后
-     * 这里会立刻再要回来，并通知网页马上续播 —— 原来监听器是彻底 no-op，焦点丢了就只能
-     * 等网页那 1 秒的巡检发现 <audio> 被暂停，用户听到的就是「断一下，过一会儿才回来」。
-     */
-    private void requestFocusInternal() {
-        if (audioManager == null) {
-            audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        }
-        if (audioManager == null) return;
-        AudioManager.OnAudioFocusChangeListener listener = focusChange -> {
-            if (focusChange == AudioManager.AUDIOFOCUS_LOSS
-                    || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT
-                    || focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
-                focusHandler.removeCallbacks(reacquireFocus);
-                focusHandler.postDelayed(reacquireFocus, 150);
-            }
-        };
-        try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                AudioFocusRequest request = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                        .setAudioAttributes(new android.media.AudioAttributes.Builder()
-                                .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
-                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
-                                .build())
-                        .setOnAudioFocusChangeListener(listener)
-                        .setWillPauseWhenDucked(false)
-                        .build();
-                audioFocusRequest = request;
-                audioManager.requestAudioFocus(request);
-            } else {
-                //noinspection deprecation
-                audioFocusRequest = listener;
-                audioManager.requestAudioFocus(listener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
-            }
-        } catch (Exception ignored) {
-            // 厂商 ROM 上偶尔会抛；焦点没了也只是退化成原来的 1 秒巡检。
-        }
     }
 
     @Override
