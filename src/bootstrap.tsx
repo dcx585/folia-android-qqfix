@@ -25,7 +25,9 @@ import './stores/useMotionSettingsStore';
 // Android 原生 fetch 桥：跨域请求（波点/酷狗旧接口等）经 OkHttp + CookieManager 发出，绕过 CORS
 import { installNativeFetchShim } from './audioNative/fetchShim';
 import { reportNativeBridgeHealth } from './audioNative/core';
+import { installNativeSettingsBridge } from './nativeSettings';
 installNativeFetchShim();
+installNativeSettingsBridge();
 // 安卓上在线音源全靠原生桥，启动时先打一份自检，排查「登录失败」不用再靠猜。
 reportNativeBridgeHealth();
 
