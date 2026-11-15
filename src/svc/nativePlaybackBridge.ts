@@ -104,17 +104,29 @@ export const installNativePlaybackBridge = async (
   // 本 App 的策略是「歌曲永不让位」：只要用户没有手动暂停（store 仍是 PLAYING），
   // 每秒检查主 audio，被系统焦点暂停就自动续播。原生侧 FoliaPlaybackService
   // 持有 AUDIOFOCUS_GAIN 且监听器为 no-op，两侧一起保证不被其他音频打断。
-  window.setInterval(() => {
+  const nudgeMainAudio = () => {
     const state = usePlaybackStore.getState();
-    if (selectDisplayPlayerState(state) === PlayerState.PLAYING) {
-      try {
-        const mainAudio = document.querySelector<HTMLAudioElement>('audio[data-folia-main-audio]');
-        if (mainAudio && mainAudio.paused && !mainAudio.ended && mainAudio.readyState >= 2) {
-          void mainAudio.play().catch(() => { /* 自动恢复失败则下秒再试 */ });
-        }
-      } catch { /* ignore */ }
-    }
-  }, 1000);
+    if (selectDisplayPlayerState(state) !== PlayerState.PLAYING) return;
+    try {
+      const mainAudio = document.querySelector<HTMLAudioElement>('audio[data-folia-main-audio]');
+      if (mainAudio && mainAudio.paused && !mainAudio.ended && mainAudio.readyState >= 2) {
+        void mainAudio.play().catch(() => { /* 自动恢复失败则下秒再试 */ });
+      }
+    } catch { /* ignore */ }
+  };
+  window.setInterval(nudgeMainAudio, 1000);
+
+  // 切后台那一刻立刻补一次，而不是等下一次巡检。
+  // 退到后台时 WebView 的音频输出会被系统收掉一下再还回来，巡检 1 秒一次的话，
+  // 用户听到的就是「断一下、过一小会才恢复」。后台定时器本身也会被节流，
+  // 所以这里把恢复动作挪到可见性变化的当下（和 200ms / 600ms 各兜一次）。
+  const onVisibilityChange = () => {
+    if (!document.hidden) return;
+    nudgeMainAudio();
+    window.setTimeout(nudgeMainAudio, 200);
+    window.setTimeout(nudgeMainAudio, 600);
+  };
+  document.addEventListener('visibilitychange', onVisibilityChange);
 
   // 原生播放状态推送：在前台每秒一次（锁屏与通知里的进度条靠它刷新），
   // 退到后台后降到每 5 秒一次。原先无论前后台都每秒强制跨桥推送并重绘通知，

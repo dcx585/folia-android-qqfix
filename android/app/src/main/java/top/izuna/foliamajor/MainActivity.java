@@ -44,6 +44,22 @@ public class MainActivity extends BridgeActivity {
         });
     }
 
+    /**
+     * 兜底：切后台时把 WebView 的定时器保住。
+     *
+     * Capacitor 的 KeepRunning 默认就是 true，正常情况下它不会暂停定时器；这里显式再
+     * resumeTimers 一次，是为了防配置被改、也防某些 ROM 在 Activity 停顿时把定时器停掉 ——
+     * 定时器一停，网页那套音频巡检和播放状态推送就跟着停，歌会断一下再回来。
+     */
+    @Override
+    public void onPause() {
+        super.onPause();
+        Bridge bridge = getBridge();
+        if (bridge != null && bridge.getWebView() != null) {
+            bridge.getWebView().resumeTimers();
+        }
+    }
+
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);

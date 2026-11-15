@@ -5,7 +5,8 @@
 	"backgroundColor": "#09090b",
 	"android": {
 		"allowMixedContent": true,
-		"useLegacyBridge": true
+		"useLegacyBridge": true,
+		"KeepRunning": true
 	},
 	"server": {
 		"androidScheme": "https",
