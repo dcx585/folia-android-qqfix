@@ -137,7 +137,6 @@ mediaSession.setCallback(new MediaSession.Callback() {
         return running;
     }
 
-    @Override
     /**
      * 请求音频焦点，并把监听器接上。
      *
@@ -180,6 +179,7 @@ mediaSession.setCallback(new MediaSession.Callback() {
         }
     }
 
+    @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null || "clear".equals(intent.getAction())) {
             recordServiceLifecycle("service-stop-command", "Stop command received");
